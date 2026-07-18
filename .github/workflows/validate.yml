@@ -1,0 +1,20 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  shell:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verifica Dockerfile
+        run: test -f Dockerfile
+      - name: Sintassi Bash
+        run: bash -n -- ./*.sh
+      - name: ShellCheck
+        run: shellcheck --severity=warning ./*.sh
