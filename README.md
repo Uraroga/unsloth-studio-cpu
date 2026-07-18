@@ -4,6 +4,98 @@ Configurazione Docker indipendente e non ufficiale per eseguire Unsloth Studio s
 
 Questa configurazione serve per inferenza e chat con modelli GGUF, incluso il tool calling quando supportato dal modello e da Studio. Non è pensata per addestramento o fine-tuning su CPU: le prestazioni sono molto inferiori a quelle di una GPU e modelli grandi possono richiedere molta RAM.
 
+## Avvio rapido
+
+Questo progetto è una configurazione indipendente, non ufficiale e CPU-only per Unsloth Studio.
+
+È pensato per **Ubuntu 24.04 LTS**. Docker deve essere già installato e funzionante. Non è necessaria una GPU.
+
+Il progetto non contiene modelli GGUF. Per usare la chat locale dovrai procurarti legalmente un modello compatibile.
+
+Apri il terminale ed esegui i comandi uno dopo l'altro.
+
+### 1. Scarica il progetto
+
+Crea la cartella `Progetti`, se non esiste, e scarica il repository:
+
+```bash
+mkdir -p ~/Progetti
+cd ~/Progetti
+git clone https://github.com/Uraroga/unsloth-studio-cpu.git
+cd unsloth-studio-cpu
+```
+
+Il comando `mkdir -p` crea la cartella soltanto se non è già presente.
+
+### 2. Costruisci l'immagine Docker
+
+```bash
+./installa_unsloth_studio_cpu.sh
+```
+
+La costruzione può richiedere parecchio tempo.
+
+Lo script scarica e installa nell'immagine Docker i componenti necessari. Non installa Docker e non scarica modelli GGUF.
+
+Attendi che il comando termini e che ritorni il prompt del terminale senza errori.
+
+### 3. Aggiungi un modello GGUF
+
+Copia un modello GGUF nella cartella:
+
+```text
+dati/workspace/modelli/
+```
+
+Esempio:
+
+```bash
+cp /percorso/del/modello.gguf dati/workspace/modelli/
+```
+
+Usa soltanto modelli ottenuti legalmente. I modelli non devono essere aggiunti al repository Git.
+
+Unsloth Studio può essere avviato anche senza modello, ma per utilizzare la chat locale serve un modello GGUF compatibile.
+
+### 4. Avvia Unsloth Studio
+
+```bash
+./avvia_unsloth_studio_cpu.sh
+```
+
+### 5. Leggi la password iniziale
+
+```bash
+./leggi_password_unsloth_studio_cpu.sh
+```
+
+Non pubblicare e non condividere la password.
+
+### 6. Apri l'interfaccia
+
+Apri nel browser dello stesso computer:
+
+```text
+http://127.0.0.1:8888
+```
+
+### 7. Seleziona il modello
+
+Nell'interfaccia di Unsloth Studio, i modelli sono disponibili nel percorso:
+
+```text
+/home/unsloth/modelli
+```
+
+### In pratica
+
+1. clona il progetto;
+2. costruisci l'immagine Docker;
+3. copia un modello GGUF nella cartella dei modelli;
+4. avvia Unsloth Studio;
+5. leggi la password;
+6. apri l'interfaccia nel browser.
+
 ## Requisiti
 
 - Ubuntu 24.04 LTS (piattaforma verificata);
