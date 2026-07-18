@@ -39,7 +39,8 @@ readonly TEST_WORKSPACE="${TEST_DIR}/workspace"
 readonly TEST_MODELS="${TEST_WORKSPACE}/modelli"
 readonly TEST_HUGGINGFACE="${TEST_DIR}/huggingface"
 readonly LOG_DIR="${PROJECT_DIR}/log"
-readonly RUN_ID="test-docker-$(date '+%Y%m%d-%H%M%S')-$$"
+RUN_ID="test-docker-$(date '+%Y%m%d-%H%M%S')-$$"
+readonly RUN_ID
 readonly OWNERSHIP_LABEL="local.unsloth-studio.test-run=${RUN_ID}"
 
 DOCKER_USE_SUDO=0
@@ -221,7 +222,7 @@ cleanup() {
             docker_cmd image rm "${IMAGE_TEST}" >/dev/null
             printf 'Immagine temporanea eliminata: %s\n' "${IMAGE_TEST}"
         else
-            printf 'ERRORE: l’immagine temporanea non ha il contrassegno atteso; non è stata eliminata.\n' >&2
+            printf "ERRORE: l'immagine temporanea non ha il contrassegno atteso; non è stata eliminata.\n" >&2
             cleanup_status=1
         fi
     fi
@@ -302,7 +303,7 @@ if container_test_exists; then
     exit 1
 fi
 if image_test_exists; then
-    printf 'L’immagine %s esiste già: non sarà sovrascritta o eliminata.\n' "${IMAGE_TEST}" >&2
+    printf "L'immagine %s esiste già: non sarà sovrascritta o eliminata.\n" "${IMAGE_TEST}" >&2
     exit 1
 fi
 if [[ -e "${TEST_DIR}" ]]; then
@@ -331,7 +332,7 @@ mkdir -p -- "${TEST_MODELS}" "${TEST_HUGGINGFACE}"
 TEST_DIR_CREATED=1
 [[ -z "$(find "${TEST_DIR}" -type f -print -quit)" ]]
 
-PHASE="build dell’immagine temporanea"
+PHASE="build dell'immagine temporanea"
 log "Build di ${IMAGE_TEST}"
 BUILD_STARTED=1
 docker_cmd build "${BUILD_CACHE_ARGS[@]}" --progress=plain \
@@ -350,7 +351,7 @@ docker_cmd create \
     "${IMAGE_TEST}" >/dev/null
 CONTAINER_CREATED=1
 
-PHASE="verifica dei file nell’immagine originale"
+PHASE="verifica dei file nell'immagine originale"
 IMAGE_ARCHIVE="${TEST_DIR}/image-rootfs.tar"
 docker_cmd export "${CONTAINER_TEST}" > "${IMAGE_ARCHIVE}"
 
@@ -373,7 +374,7 @@ function mib(bytes) {
 }
 BEGIN {
     danger=0
-    printf "File runtime e possibili pesi presenti nell’immagine originale:\n"
+    printf "File runtime e possibili pesi presenti nella immagine originale:\n"
 }
 {
     path=normalized_path()
@@ -419,10 +420,10 @@ image_scan_status=$?
 set -e
 
 if (( image_scan_status == 42 )); then
-    printf 'Trovato almeno un possibile modello incorporato o un file nella directory utente dell’immagine.\n' >&2
+    printf "Trovato almeno un possibile modello incorporato o un file nella directory utente dell'immagine.\n" >&2
     exit 1
 elif (( image_scan_status != 0 )); then
-    printf 'Impossibile analizzare il filesystem esportato dell’immagine, codice %s.\n' \
+    printf "Impossibile analizzare il filesystem esportato dell'immagine, codice %s.\n" \
         "${image_scan_status}" >&2
     exit "${image_scan_status}"
 fi
@@ -446,8 +447,8 @@ CONTAINER_CREATED=1
 PHASE="avvio del container temporaneo"
 docker_cmd start "${CONTAINER_TEST}" >/dev/null
 
-PHASE="attesa dell’healthcheck"
-log "Attesa dell’healthcheck, massimo ${WAIT_SECONDS} secondi"
+PHASE="attesa dell'healthcheck"
+log "Attesa dell'healthcheck, massimo ${WAIT_SECONDS} secondi"
 deadline=$((SECONDS + WAIT_SECONDS))
 while (( SECONDS < deadline )); do
     running="$(docker_cmd container inspect --format '{{.State.Running}}' "${CONTAINER_TEST}")"
@@ -462,7 +463,7 @@ while (( SECONDS < deadline )); do
 done
 [[ "${HEALTH_RESULT}" == "healthy" ]] || { printf 'Healthcheck non healthy entro %s secondi.\n' "${WAIT_SECONDS}" >&2; exit 1; }
 
-PHASE="verifica dell’API"
+PHASE="verifica dell'API"
 API_RESPONSE="$(curl --fail --silent --show-error --max-time 5 "http://127.0.0.1:${HOST_PORT}/api/health")"
 
 PHASE="verifiche del container"
@@ -493,9 +494,9 @@ if [[ -n "${mounted_model_files}" ]]; then
         "${mounted_model_files}" >&2
     exit 1
 fi
-MODELS_RESULT="nessun peso oltre 50 MiB nell’immagine e nessun modello nelle directory temporanee"
+MODELS_RESULT="nessun peso oltre 50 MiB nell'immagine e nessun modello nelle directory temporanee"
 
-PHASE="verifica dell’installazione principale"
+PHASE="verifica dell'installazione principale"
 MAIN_IMAGE_ID_AFTER="$(docker_cmd image inspect --format '{{.Id}}' "${IMAGE_MAIN}" 2>/dev/null || printf 'assente')"
 MAIN_CONTAINER_ID_AFTER="$(docker_cmd container inspect --format '{{.Id}}' "${CONTAINER_MAIN}" 2>/dev/null || printf 'assente')"
 MAIN_CONTAINER_STATE_AFTER="$(docker_cmd container inspect --format '{{.State.Status}}' "${CONTAINER_MAIN}" 2>/dev/null || printf 'assente')"

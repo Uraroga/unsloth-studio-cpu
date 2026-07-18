@@ -3,9 +3,6 @@ set -Eeuo pipefail
 
 CONTAINER_NAME="unsloth-studio-cpu"
 DOCKER_USE_SUDO=0
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-PROJECT_DIR="${SCRIPT_DIR}"
-
 die() {
     printf 'ERRORE: %s\n' "$*" >&2
     exit 1

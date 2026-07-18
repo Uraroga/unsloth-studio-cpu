@@ -94,7 +94,7 @@ fi
 PHASE="ricerca del container"
 if ! container_exists; then
     log "Il container ${CONTAINER_NAME} non esiste"
-    printf 'Non c’è nulla da fermare o eliminare.\n'
+    printf "Non c'e nulla da fermare o eliminare.\n"
     exit 0
 fi
 
@@ -115,7 +115,7 @@ printf '\nATTENZIONE: i dati interni al container che non sono montati saranno p
 printf 'Le directory persistenti non saranno cancellate:\n'
 printf '  %s\n' "${PROJECT_DIR}/dati/workspace"
 printf '  %s\n' "${PROJECT_DIR}/dati/huggingface"
-printf 'L’immagine %s non sarà cancellata.\n' "${IMAGE_NAME}"
+printf "L'immagine %s non sarà cancellata.\n" "${IMAGE_NAME}"
 
 if [[ "${ASSUME_YES}" != "1" ]]; then
     printf '\nPer confermare, scrivi esattamente DISTRUGGI: '
@@ -139,7 +139,7 @@ if [[ "${container_running}" == "true" ]]; then
         log "Elimino il container arrestato"
         docker_cmd container rm "${CONTAINER_NAME}" >/dev/null
     else
-        printf '\nAVVISO: l’arresto ordinato è fallito; procedo con la rimozione forzata del solo container %s.\n' \
+        printf "\nAVVISO: l'arresto ordinato è fallito; procedo con la rimozione forzata del solo container %s.\n" \
             "${CONTAINER_NAME}" >&2
         PHASE="rimozione forzata dopo arresto fallito"
         docker_cmd container rm --force "${CONTAINER_NAME}" >/dev/null
@@ -159,5 +159,5 @@ docker_cmd image inspect "${IMAGE_NAME}" >/dev/null 2>&1 \
 
 log "Operazione completata"
 printf 'Il container %s è stato eliminato.\n' "${CONTAINER_NAME}"
-printf 'L’immagine %s è ancora presente.\n' "${IMAGE_NAME}"
+printf "L'immagine %s è ancora presente.\n" "${IMAGE_NAME}"
 printf 'Dati persistenti e modelli non sono stati cancellati.\n'

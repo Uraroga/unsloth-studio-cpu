@@ -37,4 +37,4 @@ fi
 docker_cmd image rm "${IMAGE_NAME}"
 docker_cmd image inspect "${IMAGE_NAME}" >/dev/null 2>&1 \
     && die "l'immagine risulta ancora presente."
-printf 'Eliminata esclusivamente l’immagine %s.\n' "${IMAGE_NAME}"
+printf "Eliminata esclusivamente l'immagine %s.\n" "${IMAGE_NAME}"
