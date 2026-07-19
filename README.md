@@ -152,6 +152,73 @@ Esempio:
 cp /percorso/del/modello.gguf dati/workspace/modelli/
 ```
 
+## Download manuale del modello consigliato
+
+Il download dall'interfaccia di Unsloth Studio può essere usato normalmente. Se però rimane fermo, mostra una velocità pari a `0 B/s` oppure non avanza per diversi minuti, puoi interromperlo e scaricare manualmente il file GGUF. Questa è una procedura alternativa, non significa che il download dall'interfaccia sia sempre guasto.
+
+Per una prima prova di questo progetto su un computer con CPU datata e 16 oppure 32 GB di RAM, il modello consigliato è `unsloth/gemma-4-E2B-it-GGUF`, nella quantizzazione `UD-Q4_K_XL`. Il file esatto è `gemma-4-E2B-it-UD-Q4_K_XL.gguf`.
+
+Il container può essere fermo durante il download. Scarica il modello **sul computer**, nella cartella persistente del progetto, non dentro il container. La posizione completa è:
+
+```text
+/home/sergio/Progetti/unsloth-studio-cpu/dati/workspace/modelli
+```
+
+Per prima cosa entra nella cartella corretta:
+
+```bash
+cd /home/sergio/Progetti/unsloth-studio-cpu
+
+mkdir -p dati/workspace/modelli
+cd dati/workspace/modelli
+```
+
+Scarica direttamente il file verificato dal repository ufficiale su Hugging Face con `wget`:
+
+```bash
+wget -c \
+  -O gemma-4-E2B-it-UD-Q4_K_XL.gguf \
+  "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-UD-Q4_K_XL.gguf"
+```
+
+L'opzione `-c` permette a `wget` di provare a riprendere un download parziale con lo stesso nome. Se `wget` non è disponibile, usa il comando equivalente con `curl`:
+
+```bash
+curl --fail --location --continue-at - \
+  --output gemma-4-E2B-it-UD-Q4_K_XL.gguf \
+  "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-UD-Q4_K_XL.gguf"
+```
+
+Non avviare Studio usando un file ancora incompleto. Attendi che il comando termini senza errori e restituisca il prompt. Verifica quindi l'integrità del file confrontando il checksum SHA-256 pubblicato nella pagina ufficiale:
+
+```bash
+echo "b8906b8c5e05e57b657646bbc657bd35814a269b2c20f0a2579047fafa1a67dd  gemma-4-E2B-it-UD-Q4_K_XL.gguf" \
+  | sha256sum --check
+```
+
+Se il download è completo e integro, il risultato deve essere:
+
+```text
+gemma-4-E2B-it-UD-Q4_K_XL.gguf: OK
+```
+
+Se compare `FAILED`, non usare il file: il download è incompleto o non corrisponde al file verificato. Riprendi il download con lo stesso comando oppure elimina soltanto quel file incompleto e scaricalo nuovamente.
+
+Quando il container principale viene creato o avviato, lo script `avvia_unsloth_studio_cpu.sh` monta questa directory in:
+
+```text
+/home/unsloth/modelli
+```
+
+Se il container era fermo, avvialo normalmente dalla cartella del progetto:
+
+```bash
+cd /home/sergio/Progetti/unsloth-studio-cpu
+./avvia_unsloth_studio_cpu.sh
+```
+
+Lo script di avvio verifica che i file GGUF presenti sul computer siano leggibili nel container. Al termine mostra sia la cartella sul computer sia `/home/unsloth/modelli`. A quel punto apri o aggiorna l'interfaccia di Unsloth Studio e seleziona il modello dalla directory montata.
+
 I mount usati dal container principale sono:
 
 | Cartella sul PC | Percorso nel container | Contenuto |
