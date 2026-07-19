@@ -156,7 +156,9 @@ cp /percorso/del/modello.gguf dati/workspace/modelli/
 
 Il download dall'interfaccia di Unsloth Studio può essere usato normalmente. Se però rimane fermo, mostra una velocità pari a `0 B/s` oppure non avanza per diversi minuti, puoi interromperlo e scaricare manualmente il file GGUF. Questa è una procedura alternativa, non significa che il download dall'interfaccia sia sempre guasto.
 
-Per una prima prova di questo progetto su un computer con CPU datata e 16 oppure 32 GB di RAM, il modello consigliato è `unsloth/gemma-4-E2B-it-GGUF`, nella quantizzazione `UD-Q4_K_XL`. Il file esatto è `gemma-4-E2B-it-UD-Q4_K_XL.gguf`.
+Per una prima prova di questo progetto su un computer con CPU datata e 16 oppure 32 GB di RAM, il modello consigliato è `Qwen/Qwen3-4B-GGUF`, nella quantizzazione `Q4_K_M`. Il file esatto è `Qwen3-4B-Q4_K_M.gguf`.
+
+Qwen3 4B è stato scelto perché, durante una prova reale con un prompt adeguato, è riuscito a utilizzare lo strumento di ricerca sul web di Unsloth Studio. Il modello non naviga autonomamente: la ricerca richiede che lo strumento web sia disponibile e attivo in Unsloth Studio.
 
 Il container può essere fermo durante il download. Scarica il modello **sul computer**, nella cartella persistente del progetto, non dentro il container. La posizione completa è:
 
@@ -177,29 +179,29 @@ Scarica direttamente il file verificato dal repository ufficiale su Hugging Face
 
 ```bash
 wget -c \
-  -O gemma-4-E2B-it-UD-Q4_K_XL.gguf \
-  "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-UD-Q4_K_XL.gguf"
+  -O Qwen3-4B-Q4_K_M.gguf \
+  "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf"
 ```
 
 L'opzione `-c` permette a `wget` di provare a riprendere un download parziale con lo stesso nome. Se `wget` non è disponibile, usa il comando equivalente con `curl`:
 
 ```bash
 curl --fail --location --continue-at - \
-  --output gemma-4-E2B-it-UD-Q4_K_XL.gguf \
-  "https://huggingface.co/unsloth/gemma-4-E2B-it-GGUF/resolve/main/gemma-4-E2B-it-UD-Q4_K_XL.gguf"
+  --output Qwen3-4B-Q4_K_M.gguf \
+  "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf"
 ```
 
 Non avviare Studio usando un file ancora incompleto. Attendi che il comando termini senza errori e restituisca il prompt. Verifica quindi l'integrità del file confrontando il checksum SHA-256 pubblicato nella pagina ufficiale:
 
 ```bash
-echo "b8906b8c5e05e57b657646bbc657bd35814a269b2c20f0a2579047fafa1a67dd  gemma-4-E2B-it-UD-Q4_K_XL.gguf" \
+echo "7485fe6f11af29433bc51cab58009521f205840f5b4ae3a32fa7f92e8534fdf5  Qwen3-4B-Q4_K_M.gguf" \
   | sha256sum --check
 ```
 
 Se il download è completo e integro, il risultato deve essere:
 
 ```text
-gemma-4-E2B-it-UD-Q4_K_XL.gguf: OK
+Qwen3-4B-Q4_K_M.gguf: OK
 ```
 
 Se compare `FAILED`, non usare il file: il download è incompleto o non corrisponde al file verificato. Riprendi il download con lo stesso comando oppure elimina soltanto quel file incompleto e scaricalo nuovamente.
