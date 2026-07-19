@@ -1,47 +1,146 @@
 # Unsloth Studio CPU Docker
 
-Configurazione Docker indipendente e non ufficiale per eseguire Unsloth Studio su una macchina senza GPU. Il progetto ufficiale è [unslothai/unsloth](https://github.com/unslothai/unsloth).
+Configurazione Docker indipendente e non ufficiale per eseguire Unsloth Studio **solo su CPU**, senza GPU. Il progetto ufficiale è [unslothai/unsloth](https://github.com/unslothai/unsloth).
 
-Questa configurazione serve per inferenza e chat con modelli GGUF, incluso il tool calling quando supportato dal modello e da Studio. Non è pensata per addestramento o fine-tuning su CPU: le prestazioni sono molto inferiori a quelle di una GPU e modelli grandi possono richiedere molta RAM.
+Questa configurazione è pensata per inferenza e chat con modelli GGUF, compreso il tool calling quando supportato dal modello e da Studio. Non è pensata per addestramento o fine-tuning su CPU: le prestazioni sono molto inferiori a quelle di una GPU e i modelli grandi possono richiedere molta RAM.
 
-## Avvio rapido
+## Requisiti
 
-Questo progetto è una configurazione indipendente, non ufficiale e CPU-only per Unsloth Studio.
+- Ubuntu 24.04 LTS su architettura x86_64;
+- CPU; la configurazione usa 4 thread e non richiede GPU, runtime NVIDIA o modalità privilegiata;
+- almeno 16 GiB di RAM, consigliati 32 GiB;
+- spazio libero per immagine, cache e modelli;
+- Docker Engine già installato, avviato e accessibile;
+- `bash`, `curl` e gli altri normali programmi di Ubuntu usati dagli script.
 
-È pensato per **Ubuntu 24.04 LTS**. Docker deve essere già installato e funzionante. Non è necessaria una GPU.
+Gli script provano prima `docker` con l'utente corrente e, quando previsto, riprovano con `sudo docker`: il terminale può quindi chiedere la password dell'utente. Il progetto non include e non scarica modelli GGUF.
 
-Il progetto non contiene modelli GGUF. Per usare la chat locale dovrai procurarti legalmente un modello compatibile.
+## Ordine consigliato per una nuova prova
 
-Apri il terminale ed esegui i comandi uno dopo l'altro.
+> **Importante:** non eseguire necessariamente tutti i comandi uno dopo l'altro. Leggi ogni messaggio, controlla l'esito e inserisci le conferme testuali soltanto dopo aver verificato cosa verrà creato o eliminato.
 
-### 1. Scarica il progetto
+Dopo un nuovo clone, l'ordine logico consigliato è:
 
-Crea la cartella `Progetti`, se non esiste, e scarica il repository:
+1. entrare nella cartella del progetto;
+2. controllare la sintassi degli script Bash;
+3. eseguire il test Docker isolato;
+4. se il test termina correttamente, costruire l'immagine principale;
+5. avviare Unsloth Studio;
+6. leggere la password iniziale;
+7. aprire l'interfaccia nel browser;
+8. fermare e distruggere il container quando non serve più;
+9. eliminare separatamente l'immagine Docker soltanto se realmente necessario.
+
+Comandi completi:
 
 ```bash
-mkdir -p ~/Progetti
-cd ~/Progetti
-git clone https://github.com/Uraroga/unsloth-studio-cpu.git
-cd unsloth-studio-cpu
+cd /home/sergio/Progetti/unsloth-studio-cpu
+
+find . -type f -name "*.sh" -exec bash -n {} \; &&
+echo "OK: sintassi degli script corretta"
+
+./testa_build_unsloth_studio_cpu.sh
+./installa_unsloth_studio_cpu.sh
+./avvia_unsloth_studio_cpu.sh
+./leggi_password_unsloth_studio_cpu.sh
+./ferma_distruggi_unsloth_studio_cpu.sh
+./elimina_immagine_unsloth_studio_cpu.sh
 ```
 
-Il comando `mkdir -p` crea la cartella soltanto se non è già presente.
+Il percorso del comando `cd` è quello richiesto per questa installazione di esempio. Se hai clonato il repository altrove, usa il percorso reale.
 
-### 2. Costruisci l'immagine Docker
+### Limite attuale su un clone pulito
+
+Il Dockerfile copia `build/unsloth-install.sh`, ma questo file è generato localmente ed escluso da Git. Lo script di test **non lo scarica**; è `installa_unsloth_studio_cpu.sh` a scaricarlo, e subito dopo costruisce anche l'immagine principale. Di conseguenza, con il codice attuale, il test isolato al punto 3 può completare la build soltanto se `build/unsloth-install.sh` è già presente. Su un clone completamente pulito fallirà durante la build per il file mancante.
+
+Questo significa che l'ordine ideale “test isolato, poi immagine principale” non è interamente realizzabile al primo clone senza preparare quel file con un'operazione non fornita da uno script separato. Non copiare manualmente un installer non verificato: usa lo script di installazione sapendo che costruirà già `local/unsloth-studio-cpu:latest`, quindi esegui il test isolato come verifica separata.
+
+## Le quattro operazioni da non confondere
+
+| Operazione | Cosa riguarda | Cosa non riguarda |
+| --- | --- | --- |
+| Test Docker isolato | Immagine `local/unsloth-studio-cpu:test`, container `unsloth-studio-cpu-test`, porta `127.0.0.1:18888` e directory vuote sotto `build/test-docker` | Non monta `dati/`, non usa modelli reali e verifica di non modificare immagine e container principali |
+| Installazione principale | Scarica l'installer ufficiale e costruisce `local/unsloth-studio-cpu:latest` | Non crea il container principale e non scarica modelli GGUF |
+| Arresto e distruzione | Ferma e rimuove soltanto il container `unsloth-studio-cpu` | Non elimina immagine, cartelle persistenti, modelli, cache o log |
+| Eliminazione immagine | Rimuove separatamente `local/unsloth-studio-cpu:latest` | Non rimuove dati persistenti; rifiuta di procedere se il container principale esiste |
+
+Le cartelle locali `dati/workspace`, `dati/workspace/modelli` e `dati/huggingface` sono indipendenti dalla vita del container. Eliminare il container non equivale a cancellarle.
+
+## Quale script devo usare?
+
+| Necessità                              | Script |
+| -------------------------------------- | ------ |
+| Verificare il progetto in modo isolato | `testa_build_unsloth_studio_cpu.sh` |
+| Costruire l'immagine principale        | `installa_unsloth_studio_cpu.sh` |
+| Avviare Unsloth Studio                 | `avvia_unsloth_studio_cpu.sh` |
+| Leggere la password iniziale           | `leggi_password_unsloth_studio_cpu.sh` |
+| Fermare ed eliminare il container      | `ferma_distruggi_unsloth_studio_cpu.sh` |
+| Eliminare anche l'immagine Docker      | `elimina_immagine_unsloth_studio_cpu.sh` |
+
+## Controllo della sintassi Bash
+
+Eseguilo prima di avviare gli script:
+
+```bash
+find . -type f -name "*.sh" -exec bash -n {} \; &&
+echo "OK: sintassi degli script corretta"
+```
+
+Il messaggio `OK` appare soltanto se `bash -n` non rileva errori di sintassi. Il controllo non costruisce immagini, non crea container e non esegue le operazioni contenute negli script.
+
+## Test Docker isolato
+
+### `testa_build_unsloth_studio_cpu.sh`
+
+Serve a costruire e collaudare una copia temporanea del progetto senza montare workspace, cache o modelli reali. Va eseguito prima di affidarsi all'installazione principale, tenendo presente il limite del file `build/unsloth-install.sh` spiegato sopra.
+
+```bash
+./testa_build_unsloth_studio_cpu.sh
+```
+
+Per forzare una build completa senza cache:
+
+```bash
+./testa_build_unsloth_studio_cpu.sh --no-cache
+```
+
+Prima di iniziare controlla gli argomenti, la presenza dei programmi richiesti, del Dockerfile e di Docker; convalida i nomi e i percorsi riservati al test; rifiuta di sovrascrivere un'immagine, un container o una directory temporanea già esistenti. Registra inoltre identificativo e stato dell'immagine e del container principali per verificare alla fine che non siano cambiati.
+
+Mostra gli elementi temporanei previsti e richiede esattamente:
+
+```text
+ESEGUI TEST DOCKER
+```
+
+Se la conferma è diversa, annulla senza avviare la build. Dopo la conferma crea directory vuote sotto `build/test-docker`, l'immagine `local/unsloth-studio-cpu:test` e il container `unsloth-studio-cpu-test`. Pubblica la porta interna `8888` esclusivamente come `127.0.0.1:18888`.
+
+Durante l'esecuzione la build può essere lunga e produrre molto testo. Lo script analizza il filesystem dell'immagine per individuare modelli incorporati o file inattesi, poi verifica healthcheck, risposta di `/api/health`, utente interno non root, assenza di modalità privilegiata e richieste GPU, porta, tre bind mount scrivibili e assenza di file modello nelle directory temporanee. Attende al massimo 180 secondi lo stato `healthy`.
+
+Il log locale è `log/test-docker-AAAAMMGG-HHMMSS.log`; `log/ultimo-test-docker.log` punta all'ultimo. In caso di errore mostra anche le ultime 100 righe dei log Docker, quando il container esiste.
+
+All'uscita tenta una pulizia controllata basata su un contrassegno univoco: elimina soltanto container e immagine temporanei creati da quella esecuzione e `build/test-docker`. Non elimina il log e non modifica `dati/`, modelli reali, immagine principale o container principale. Il test è riuscito quando compare il riepilogo con build completata, healthcheck `healthy`, verifiche superate e il comando restituisce il prompt con codice zero; subito dopo devono comparire i messaggi di pulizia degli elementi temporanei.
+
+## Installazione principale
+
+### `installa_unsloth_studio_cpu.sh`
+
+Serve a preparare l'installer usato dal Dockerfile e a costruire l'immagine principale. Eseguilo dopo le verifiche preliminari, oppure per ricostruire l'immagine.
 
 ```bash
 ./installa_unsloth_studio_cpu.sh
 ```
 
-La costruzione può richiedere parecchio tempo.
+Lo script controlla Linux, architettura x86_64, Ubuntu 24.04 LTS, Dockerfile, `curl`, Docker e relativi permessi. Crea, se mancanti, `build/`, `log/`, `dati/workspace/modelli` e `dati/huggingface`; scarica tramite HTTPS `https://unsloth.ai/install.sh`, verifica che inizi come script shell, lo salva come `build/unsloth-install.sh` e lo rende eseguibile.
 
-Lo script scarica e installa nell'immagine Docker i componenti necessari. Non installa Docker e non scarica modelli GGUF.
+Costruisce quindi `local/unsloth-studio-cpu:latest` passando UID e GID dell'utente. Il Dockerfile parte da Ubuntu 24.04, installa Unsloth Studio in `/opt/unsloth-studio` con Python 3.13 e opzione `--no-torch`, verifica il comando `unsloth --version`, espone internamente la porta `8888` e definisce il healthcheck su `/api/health`. La build può scaricare molti pacchetti e richiedere parecchio tempo.
 
-Attendi che il comando termini e che ritorni il prompt del terminale senza errori.
+Non è richiesta una conferma testuale. Il log è `log/installazione-AAAAMMGG-HHMMSS-XXXXXX.log`; non viene creato un collegamento “ultimo log”. Lo script conserva l'installer scaricato, le directory locali e l'immagine costruita; non elimina dati, non scarica modelli GGUF e non crea container. Una nuova build può aggiornare il tag `latest` secondo il normale comportamento di Docker.
 
-### 3. Aggiungi un modello GGUF
+L'operazione è conclusa correttamente quando stampa `Immagine costruita: local/unsloth-studio-cpu:latest`, conferma che nessun container o modello è stato creato o scaricato e termina con codice zero. Verifica inoltre che l'immagine prodotta sia `linux/amd64`.
 
-Copia un modello GGUF nella cartella:
+## Modelli e dati persistenti
+
+Metti manualmente un modello GGUF ottenuto legalmente in:
 
 ```text
 dati/workspace/modelli/
@@ -53,158 +152,129 @@ Esempio:
 cp /percorso/del/modello.gguf dati/workspace/modelli/
 ```
 
-Usa soltanto modelli ottenuti legalmente. I modelli non devono essere aggiunti al repository Git.
+I mount usati dal container principale sono:
 
-Unsloth Studio può essere avviato anche senza modello, ma per utilizzare la chat locale serve un modello GGUF compatibile.
+| Cartella sul PC | Percorso nel container | Contenuto |
+| --- | --- | --- |
+| `dati/workspace` | `/workspace` | workspace persistente |
+| `dati/huggingface` | `/home/unsloth/.cache/huggingface` | cache Hugging Face persistente |
+| `dati/workspace/modelli` | `/home/unsloth/modelli` | modelli, visibili anche sotto `/workspace/modelli` |
 
-### 4. Avvia Unsloth Studio
+Database, account, impostazioni e chat di Unsloth Studio non hanno un mount dedicato verificato. Se rimangono soltanto nel filesystem interno del container, possono andare persi quando il container viene eliminato.
+
+## Avvio di Unsloth Studio
+
+### `avvia_unsloth_studio_cpu.sh`
+
+Serve a creare e avviare il container principale, oppure a riavviarlo se esiste già ed è fermo. Va eseguito dopo la costruzione dell'immagine.
 
 ```bash
 ./avvia_unsloth_studio_cpu.sh
 ```
 
-### 5. Leggi la password iniziale
+Controlla `docker`, `curl`, accesso al demone e presenza di `local/unsloth-studio-cpu:latest`. Crea le tre directory persistenti. Se il container esiste, verifica che usi esattamente l'immagine prevista, la porta prevista e i tre mount previsti; in caso contrario non lo modifica. Se deve avviarlo, controlla con `ss` o `lsof` che la porta 8888 non sia già occupata.
+
+Quando necessario crea `unsloth-studio-cpu` con `--init`, memoria condivisa di 2 GiB, i tre bind mount e associazione `127.0.0.1:8888:8888`. Non richiede conferme testuali. Non elimina alcun dato, container o immagine.
+
+Attende fino a 180 secondi che il container resti in esecuzione, diventi `healthy` e risponda su `http://127.0.0.1:8888/api/health`. Verifica poi i mount, la leggibilità della directory dei modelli e che tutti i file GGUF presenti sul PC siano leggibili nel container.
+
+Il log locale è `log/avvio-AAAAMMGG-HHMMSS-XXXXXX.log`; `log/ultimo-avvio.log` punta all'ultimo. I log dell'applicazione sono inoltre disponibili tramite `docker logs unsloth-studio-cpu`; in caso di errore lo script ne mostra fino a 100 righe.
+
+L'avvio è riuscito quando viene mostrata la tabella del container e compaiono indirizzo `http://127.0.0.1:8888`, cartella modelli sul PC e `/home/unsloth/modelli`, senza errori finali.
+
+## Password iniziale
+
+### `leggi_password_unsloth_studio_cpu.sh`
+
+Serve a mostrare la password temporanea iniziale. Eseguilo dopo che il container principale è stato avviato.
 
 ```bash
 ./leggi_password_unsloth_studio_cpu.sh
 ```
 
-Non pubblicare e non condividere la password.
+Controlla Docker e i permessi, verifica che `unsloth-studio-cpu` esista e sia in esecuzione, quindi cerca il primo file `.bootstrap_password` sotto `/opt/unsloth-studio` o `/home/unsloth` e ne mostra il contenuto. Non usa porte, non crea o elimina file, directory, container, immagini o dati e non richiede conferme testuali.
 
-### 6. Apri l'interfaccia
+Questo script non salva un log locale: la password appare soltanto nel terminale. Non condividerla. Se il file non viene trovato, la password potrebbe essere già stata cambiata; se l'operazione riesce compaiono `Password temporanea di Unsloth Studio:` e un valore non vuoto.
 
-Apri nel browser dello stesso computer:
+Apri quindi, sullo stesso computer:
 
 ```text
 http://127.0.0.1:8888
 ```
 
-### 7. Seleziona il modello
+## Arresto e distruzione del container
 
-Nell'interfaccia di Unsloth Studio, i modelli sono disponibili nel percorso:
+### `ferma_distruggi_unsloth_studio_cpu.sh`
 
-```text
-/home/unsloth/modelli
-```
-
-### In pratica
-
-1. clona il progetto;
-2. costruisci l'immagine Docker;
-3. copia un modello GGUF nella cartella dei modelli;
-4. avvia Unsloth Studio;
-5. leggi la password;
-6. apri l'interfaccia nel browser.
-
-## Requisiti
-
-- Ubuntu 24.04 LTS (piattaforma verificata);
-- CPU x86_64; test previsto su Intel Core i5-4590 con 4 thread;
-- almeno 16 GiB di RAM, consigliati 32 GiB;
-- spazio libero per immagine, cache e modelli;
-- Docker Engine.
-
-Gli script sono scritti per `bash` e usano normali programmi disponibili su Ubuntu, tra cui `curl`, `tar`, `awk`, `find` e `tee`. Lo script di avvio controlla la porta con `ss` oppure, se `ss` non è disponibile, con `lsof`. Docker viene usato direttamente quando l'utente ha i permessi; altrimenti gli script provano `sudo docker` e il terminale può chiedere la password. Lo script di test controlla i propri programmi richiesti prima di iniziare la build.
-
-Non servono GPU, runtime NVIDIA o modalità privilegiata. La build usa Python 3.13 tramite l'installer ufficiale e la modalità `--no-torch`. L'installer di Unsloth e alcune sue dipendenze sono risolti al momento della build: finché il progetto ufficiale non offre un artefatto stabile completamente bloccabile, una ricostruzione futura può installare versioni diverse.
-
-## Installazione
-
-```bash
-git clone https://github.com/Uraroga/unsloth-studio-cpu.git
-cd unsloth-studio-cpu
-./installa_unsloth_studio_cpu.sh
-```
-
-Lo script costruisce `local/unsloth-studio-cpu:latest`; non scarica modelli e non crea container.
-
-Durante l'installazione, `installa_unsloth_studio_cpu.sh` scarica l'installer ufficiale di Unsloth in `build/unsloth-install.sh`. Il Dockerfile copia e usa quel file per installare Studio nell'immagine. La directory `build/` è generata localmente ed è intenzionalmente esclusa da Git: dopo un clone nuovo bisogna quindi usare lo script di installazione. Un semplice `docker build` eseguito prima dello script può fallire perché `build/unsloth-install.sh` non esiste ancora.
-
-Il progetto è ricostruibile attraverso lo script, ma la scelta attuale non garantisce immagini identiche byte per byte nel tempo. Ubuntu 24.04 non è fissata tramite digest, i pacchetti APT non sono bloccati a versioni esatte, l'installer ufficiale viene scaricato al momento e le versioni risolte di Unsloth e llama.cpp possono cambiare.
-
-## Test Docker isolato
-
-Prima di usare l'installazione principale è possibile eseguire:
-
-```bash
-./testa_build_unsloth_studio_cpu.sh
-```
-
-Lo script costruisce l'immagine temporanea `local/unsloth-studio-cpu:test` e usa un container temporaneo separato sulla porta `127.0.0.1:18888`. Workspace, cache e cartella modelli del test sono vuoti e isolati sotto `build/test-docker`: non vengono usati dati o modelli reali. Lo script controlla build, healthcheck, API, utente interno, porta, mount e assenza di file modello. Al termine, anche in caso di errore quando possibile, elimina soltanto il container, l'immagine e le directory temporanee contrassegnate per il test.
-
-Prima di procedere richiede di scrivere esattamente:
-
-```text
-ESEGUI TEST DOCKER
-```
-
-## Modelli e avvio
-
-Metti manualmente un modello autorizzato, per esempio `modello.gguf`, in:
-
-```text
-dati/workspace/modelli/modello.gguf
-```
-
-Non sono inclusi modelli e questo progetto non fornisce collegamenti a copie non autorizzate. Avvia con:
-
-```bash
-./avvia_unsloth_studio_cpu.sh
-```
-
-Apri <http://127.0.0.1:8888>. La porta è associata soltanto a localhost. In Studio la directory dei modelli è `/home/unsloth/modelli`; gli stessi file sono visibili anche in `/workspace/modelli`.
-
-Per leggere una sola volta la password iniziale, quando ancora disponibile:
-
-```bash
-./leggi_password_unsloth_studio_cpu.sh
-```
-
-La password non viene salvata nei log del progetto.
-
-## Persistenza e rimozione
-
-- `dati/workspace` viene montata in `/workspace`;
-- `dati/workspace/modelli` viene montata anche in `/home/unsloth/modelli`;
-- `dati/huggingface` viene montata nella cache Hugging Face dell'utente `unsloth`;
-- `log` contiene soltanto i log degli script locali.
-
-Workspace, modelli e cache Hugging Face sono quindi conservati sul PC. Database, account, impostazioni e chat di Unsloth Studio non hanno ancora un mount dedicato verificato: non bisogna considerarli persistenti senza una verifica. Distruggendo il container, tutti i dati interni che non si trovano nelle directory montate possono essere persi.
-
-Queste directory sono ignorate da Git. Per fermare ed eliminare esclusivamente il container:
+Serve a fermare e rimuovere **soltanto** il container principale quando non serve più o quando deve essere ricreato.
 
 ```bash
 ./ferma_distruggi_unsloth_studio_cpu.sh
 ```
 
-Conferma con `DISTRUGGI`. Dati, cache, modelli, log e immagine restano intatti. Per eliminare separatamente la sola immagine, dopo aver rimosso il container:
+Controlla Docker, cerca `unsloth-studio-cpu` e verifica che sia associato al nome immagine `local/unsloth-studio-cpu:latest`; se il container non esiste termina correttamente senza eliminare nulla. Mostra nome, immagine, stato e cartelle che resteranno.
+
+Richiede esattamente:
+
+```text
+DISTRUGGI
+```
+
+Una risposta diversa annulla l'operazione. L'opzione `--yes` salta consapevolmente la conferma. Se il container è attivo prova un arresto ordinato con timeout di 30 secondi, poi lo rimuove; se l'arresto fallisce forza la rimozione del solo container. Se è già fermo lo rimuove direttamente. Non usa porte.
+
+Vengono persi soltanto i dati rimasti all'interno del container e non montati. Lo script non cancella `dati/workspace`, `dati/workspace/modelli`, `dati/huggingface`, i log o l'immagine. Il log è `log/distruzione-AAAAMMGG-HHMMSS-XXXXXX.log`; `log/ultima-distruzione.log` punta all'ultimo.
+
+L'operazione è riuscita quando verifica che il container non esista più, che l'immagine esista ancora e stampa `Operazione completata`, insieme alla conferma che dati persistenti e modelli non sono stati cancellati.
+
+## Eliminazione separata dell'immagine
+
+### `elimina_immagine_unsloth_studio_cpu.sh`
+
+Serve a rimuovere l'immagine principale per recuperare spazio. Eseguilo soltanto se non serve più e dopo aver rimosso il container principale.
 
 ```bash
 ./elimina_immagine_unsloth_studio_cpu.sh
 ```
 
-Conferma con `ELIMINA IMMAGINE`. È disponibile `--yes` per automazione consapevole.
+Controlla argomenti, Docker e permessi; rifiuta di procedere se `unsloth-studio-cpu` esiste o se `local/unsloth-studio-cpu:latest` non esiste. Mostra identificativo, tag e dimensione dell'immagine, poi richiede esattamente:
 
-## File del progetto e file locali
+```text
+ELIMINA IMMAGINE
+```
 
-- `VERSION` contiene la versione del progetto.
-- `CHANGELOG.md` descrive le modifiche delle versioni pubblicate.
-- `.github/workflows/validate.yml` esegue su push e pull request il controllo del Dockerfile, `bash -n` e ShellCheck.
-- `build/` contiene installer e directory temporanee generate localmente.
-- `dati/` contiene workspace, modelli e cache persistenti.
-- `log/` contiene i log prodotti dagli script.
-- `IMMAGINE.txt` e `docker-image-inspect.json`, quando presenti, sono riepiloghi locali e non sono necessari per ricostruire il progetto.
+Una risposta diversa annulla. L'opzione `--yes` salta la conferma. Lo script esegue la rimozione dell'immagine e verifica che non sia più ispezionabile; non usa porte, non elimina container, dati persistenti, modelli, cache o log.
 
-Le directory `build/`, `dati/` e `log/`, i modelli, le cache, i database e le credenziali non vengono pubblicati nel repository Git.
+Il log è `log/eliminazione-immagine-AAAAMMGG-HHMMSS-XXXXXX.log`; `log/ultima-eliminazione-immagine.log` punta all'ultimo. L'operazione è riuscita quando stampa `Eliminata esclusivamente l'immagine local/unsloth-studio-cpu:latest.` e termina con codice zero.
 
-## Risoluzione dei problemi
+## File locali e Git
 
-- Consulta `log/` e `docker logs unsloth-studio-cpu` senza condividere password o token.
-- Verifica lo stato con `docker inspect --format '{{.State.Health.Status}}' unsloth-studio-cpu`.
-- Controlla che la porta 8888 non sia occupata e che Docker sia avviato.
-- Se cambi UID/GID o Dockerfile, rimuovi il solo container e ricostruisci l'immagine con lo script di installazione.
-- Una ricostruzione completa non elimina automaticamente cache o dati persistenti.
+- `build/` contiene l'installer scaricato e le directory temporanee del test;
+- `dati/` contiene workspace, modelli e cache persistenti;
+- `log/` contiene i log degli script locali;
+- `IMMAGINE.txt` e `docker-image-inspect.json`, quando presenti, sono riepiloghi locali;
+- `VERSION` contiene la versione del progetto e `CHANGELOG.md` ne descrive le modifiche;
+- `.github/workflows/validate.yml` controlla Dockerfile, sintassi Bash e ShellCheck su Ubuntu 24.04.
+
+Queste directory e i file sensibili o voluminosi sono esclusi da Git secondo `.gitignore` e `.dockerignore`. Non pubblicare password, token, database o modelli.
+
+## Verifica finale e risoluzione dei problemi
+
+Comandi utili:
+
+```bash
+docker ps -a --filter "name=unsloth-studio-cpu"
+docker images "local/unsloth-studio-cpu"
+docker logs unsloth-studio-cpu
+docker inspect --format '{{.State.Health.Status}}' unsloth-studio-cpu
+```
+
+- `docker ps -a` mostra se il container principale esiste e il suo stato;
+- `docker images` mostra i tag `latest` e, se una pulizia del test non è riuscita, eventualmente `test`;
+- `docker logs` mostra i log prodotti dentro il container;
+- `docker inspect` deve restituire `healthy` quando Studio è pronto.
+
+Se i comandi Docker richiedono privilegi, anteponi `sudo`. Controlla anche i file sotto `log/`, che la porta `127.0.0.1:8888` sia libera e che Docker sia avviato. Una ricostruzione o la rimozione del container non elimina automaticamente dati persistenti e cache.
 
 ## Licenze e riconoscimenti
 
-Il codice di questo repository è distribuito secondo GNU AGPL v3; vedi [LICENSE](LICENSE). Le dipendenze mantengono le loro licenze, riepilogate in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Grazie ai progetti [Unsloth](https://github.com/unslothai/unsloth) e [llama.cpp](https://github.com/ggml-org/llama.cpp).
+Il codice di questo repository è distribuito secondo GNU AGPL v3; vedi [LICENSE](LICENSE). Le dipendenze conservano le proprie licenze, riepilogate in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). Grazie ai progetti [Unsloth](https://github.com/unslothai/unsloth) e [llama.cpp](https://github.com/ggml-org/llama.cpp).
