@@ -9,9 +9,11 @@ Questa configurazione è pensata per inferenza e chat con modelli GGUF, compreso
 - Ubuntu 24.04 LTS su architettura x86_64;
 - CPU; la configurazione usa 4 thread e non richiede GPU, runtime NVIDIA o modalità privilegiata;
 - almeno 16 GiB di RAM, consigliati 32 GiB;
-- spazio libero per immagine, cache e modelli;
-- Docker Engine già installato, avviato e accessibile;
+- spazio disponibile per immagine Docker, cache e modelli;
+- Docker Engine;
 - `bash`, `curl` e gli altri normali programmi di Ubuntu usati dagli script.
+
+Chi ha già Docker installato, avviato e funzionante può usare direttamente gli script del progetto. Chi usa Ubuntu 24.04 LTS x86_64 e non ha ancora Docker può preparare il sistema con `installa_docker_ubuntu.sh`, che usa il repository APT ufficiale Docker. Lo script non supporta altre distribuzioni o versioni di Ubuntu e non rimuove automaticamente pacchetti Docker preesistenti o incompatibili.
 
 Gli script provano prima `docker` con l'utente corrente e, quando previsto, riprovano con `sudo docker`: il terminale può quindi chiedere la password dell'utente. Il progetto non include e non scarica modelli GGUF.
 
@@ -19,19 +21,17 @@ Gli script provano prima `docker` con l'utente corrente e, quando previsto, ripr
 
 > **Importante:** non eseguire necessariamente tutti i comandi uno dopo l'altro. Leggi ogni messaggio, controlla l'esito e inserisci le conferme testuali soltanto dopo aver verificato cosa verrà creato o eliminato.
 
-Dopo un nuovo clone, l'ordine logico consigliato è:
+Dopo un nuovo clone su un computer sul quale Docker non è ancora installato, l'ordine logico consigliato è:
 
 1. entrare nella cartella del progetto;
 2. controllare la sintassi degli script Bash;
-3. eseguire il test Docker isolato;
-4. se il test termina correttamente, costruire l'immagine principale;
-5. avviare Unsloth Studio;
-6. leggere la password iniziale;
-7. aprire l'interfaccia nel browser;
-8. fermare e distruggere il container quando non serve più;
-9. eliminare separatamente l'immagine Docker soltanto se realmente necessario.
+3. installare Docker con lo script dedicato e leggere attentamente le richieste di conferma;
+4. dopo l'eventuale nuovo accesso alla sessione, verificare Docker;
+5. costruire l'immagine principale;
+6. avviare Unsloth Studio;
+7. leggere la password iniziale e aprire l'interfaccia nel browser.
 
-Comandi completi:
+Prima parte:
 
 ```bash
 cd /home/sergio/Progetti/unsloth-studio-cpu
@@ -39,10 +39,29 @@ cd /home/sergio/Progetti/unsloth-studio-cpu
 find . -type f -name "*.sh" -exec bash -n {} \; &&
 echo "OK: sintassi degli script corretta"
 
-./testa_build_unsloth_studio_cpu.sh
+./installa_docker_ubuntu.sh
+```
+
+Dopo l'eventuale uscita e il nuovo accesso alla sessione:
+
+```bash
+cd /home/sergio/Progetti/unsloth-studio-cpu
+
+docker info
 ./installa_unsloth_studio_cpu.sh
 ./avvia_unsloth_studio_cpu.sh
 ./leggi_password_unsloth_studio_cpu.sh
+```
+
+Il test Docker isolato può essere eseguito successivamente come verifica separata, tenendo presente il limite documentato sotto:
+
+```bash
+./testa_build_unsloth_studio_cpu.sh
+```
+
+Arresto del container ed eliminazione dell'immagine sono operazioni facoltative successive e separate, da eseguire soltanto quando servono:
+
+```bash
 ./ferma_distruggi_unsloth_studio_cpu.sh
 ./elimina_immagine_unsloth_studio_cpu.sh
 ```
@@ -51,16 +70,18 @@ Il percorso del comando `cd` è quello richiesto per questa installazione di ese
 
 ### Limite attuale su un clone pulito
 
-Il Dockerfile copia `build/unsloth-install.sh`, ma questo file è generato localmente ed escluso da Git. Lo script di test **non lo scarica**; è `installa_unsloth_studio_cpu.sh` a scaricarlo, e subito dopo costruisce anche l'immagine principale. Di conseguenza, con il codice attuale, il test isolato al punto 3 può completare la build soltanto se `build/unsloth-install.sh` è già presente. Su un clone completamente pulito fallirà durante la build per il file mancante.
+Il Dockerfile copia `build/unsloth-install.sh`, ma questo file è generato localmente ed escluso da Git. Lo script di test **non lo scarica**; è `installa_unsloth_studio_cpu.sh` a scaricarlo, e subito dopo costruisce anche l'immagine principale. Di conseguenza, con il codice attuale, il test isolato può completare la build soltanto se `build/unsloth-install.sh` è già presente. Su un clone completamente pulito fallirà durante la build per il file mancante.
 
 Questo significa che l'ordine ideale “test isolato, poi immagine principale” non è interamente realizzabile al primo clone senza preparare quel file con un'operazione non fornita da uno script separato. Non copiare manualmente un installer non verificato: usa lo script di installazione sapendo che costruirà già `local/unsloth-studio-cpu:latest`, quindi esegui il test isolato come verifica separata.
 
-## Le quattro operazioni da non confondere
+## Le operazioni da non confondere
 
 | Operazione | Cosa riguarda | Cosa non riguarda |
 | --- | --- | --- |
+| Installazione di Docker | `installa_docker_ubuntu.sh` installa e configura Docker nel sistema operativo | Non scarica Unsloth Studio, non costruisce l'immagine del progetto e non crea il container principale |
 | Test Docker isolato | Immagine `local/unsloth-studio-cpu:test`, container `unsloth-studio-cpu-test`, porta `127.0.0.1:18888` e directory vuote sotto `build/test-docker` | Non monta `dati/`, non usa modelli reali e verifica di non modificare immagine e container principali |
-| Installazione principale | Scarica l'installer ufficiale e costruisce `local/unsloth-studio-cpu:latest` | Non crea il container principale e non scarica modelli GGUF |
+| Installazione principale | `installa_unsloth_studio_cpu.sh` scarica l'installer ufficiale di Unsloth Studio e costruisce `local/unsloth-studio-cpu:latest` | Non installa Docker, non crea il container principale e non scarica modelli GGUF |
+| Avvio di Studio | `avvia_unsloth_studio_cpu.sh` crea o avvia il container principale | Non installa Docker e non costruisce l'immagine principale |
 | Arresto e distruzione | Ferma e rimuove soltanto il container `unsloth-studio-cpu` | Non elimina immagine, cartelle persistenti, modelli, cache o log |
 | Eliminazione immagine | Rimuove separatamente `local/unsloth-studio-cpu:latest` | Non rimuove dati persistenti; rifiuta di procedere se il container principale esiste |
 
@@ -68,14 +89,15 @@ Le cartelle locali `dati/workspace`, `dati/workspace/modelli` e `dati/huggingfac
 
 ## Quale script devo usare?
 
-| Necessità                              | Script |
-| -------------------------------------- | ------ |
-| Verificare il progetto in modo isolato | `testa_build_unsloth_studio_cpu.sh` |
-| Costruire l'immagine principale        | `installa_unsloth_studio_cpu.sh` |
-| Avviare Unsloth Studio                 | `avvia_unsloth_studio_cpu.sh` |
-| Leggere la password iniziale           | `leggi_password_unsloth_studio_cpu.sh` |
-| Fermare ed eliminare il container      | `ferma_distruggi_unsloth_studio_cpu.sh` |
-| Eliminare anche l'immagine Docker      | `elimina_immagine_unsloth_studio_cpu.sh` |
+| Necessità                                       | Script |
+| ----------------------------------------------- | ------ |
+| Installare e configurare Docker su Ubuntu 24.04 | `installa_docker_ubuntu.sh` |
+| Verificare il progetto in modo isolato          | `testa_build_unsloth_studio_cpu.sh` |
+| Costruire l'immagine principale                 | `installa_unsloth_studio_cpu.sh` |
+| Avviare Unsloth Studio                          | `avvia_unsloth_studio_cpu.sh` |
+| Leggere la password iniziale                    | `leggi_password_unsloth_studio_cpu.sh` |
+| Fermare ed eliminare il container               | `ferma_distruggi_unsloth_studio_cpu.sh` |
+| Eliminare anche l'immagine Docker               | `elimina_immagine_unsloth_studio_cpu.sh` |
 
 ## Controllo della sintassi Bash
 
@@ -92,7 +114,7 @@ Il messaggio `OK` appare soltanto se `bash -n` non rileva errori di sintassi. Il
 
 ### `testa_build_unsloth_studio_cpu.sh`
 
-Serve a costruire e collaudare una copia temporanea del progetto senza montare workspace, cache o modelli reali. Va eseguito prima di affidarsi all'installazione principale, tenendo presente il limite del file `build/unsloth-install.sh` spiegato sopra.
+Serve a costruire e collaudare una copia temporanea del progetto senza montare workspace, cache o modelli reali. Può essere eseguito come verifica separata, tenendo presente il limite del file `build/unsloth-install.sh` spiegato sopra.
 
 ```bash
 ./testa_build_unsloth_studio_cpu.sh
@@ -120,11 +142,45 @@ Il log locale è `log/test-docker-AAAAMMGG-HHMMSS.log`; `log/ultimo-test-docker.
 
 All'uscita tenta una pulizia controllata basata su un contrassegno univoco: elimina soltanto container e immagine temporanei creati da quella esecuzione e `build/test-docker`. Non elimina il log e non modifica `dati/`, modelli reali, immagine principale o container principale. Il test è riuscito quando compare il riepilogo con build completata, healthcheck `healthy`, verifiche superate e il comando restituisce il prompt con codice zero; subito dopo devono comparire i messaggi di pulizia degli elementi temporanei.
 
+## Installazione di Docker su Ubuntu 24.04
+
+### `installa_docker_ubuntu.sh`
+
+Questo script prepara Docker nel sistema operativo ed è destinato esclusivamente a Linux, Ubuntu 24.04 LTS e architettura x86_64. Se Docker è già installato, attivo e utilizzabile, non lo reinstalla. Non va confuso con `installa_unsloth_studio_cpu.sh`, che presuppone Docker disponibile e costruisce invece l'immagine Unsloth Studio del progetto.
+
+```bash
+./installa_docker_ubuntu.sh
+```
+
+Lo script controlla sistema operativo, versione Ubuntu, architettura e programmi necessari, quindi verifica se Docker è già installato e accessibile dall'utente corrente oppure soltanto tramite `sudo`. Prima di installare Docker CE rileva pacchetti potenzialmente incompatibili, tra cui `docker.io`, `containerd`, `runc` e `podman-docker`. Se ne trova uno o più, interrompe l'installazione, li elenca e mostra un comando di rimozione da valutare manualmente: non li rimuove automaticamente.
+
+Prima di qualsiasi modifica al sistema mostra un riepilogo e richiede di digitare esattamente:
+
+```text
+INSTALLA DOCKER
+```
+
+Dopo la conferma configura il repository APT ufficiale Docker in `/etc/apt/sources.list.d/docker.sources`, installa Docker Engine, Docker CLI, containerd, Buildx e Docker Compose, quindi abilita e avvia il servizio Docker. Il log viene salvato con un nome simile a:
+
+```text
+log/installazione-docker-AAAAMMGG-HHMMSS.log
+```
+
+La configurazione dell'utente è una scelta separata. Lo script può aggiungere l'utente corrente al gruppo `docker` soltanto dopo la seconda conferma esplicita:
+
+```text
+AGGIUNGI UTENTE A DOCKER
+```
+
+L'appartenenza al gruppo `docker` consente di controllare il demone Docker e concede privilegi amministrativi sostanzialmente equivalenti a quelli dell'utente root. Dopo l'aggiunta può essere necessario uscire e rientrare nella sessione, riavviare il computer oppure eseguire manualmente `newgrp docker` per una prova temporanea. Lo script non esegue automaticamente `newgrp` e non modifica i permessi di `/var/run/docker.sock`.
+
+Il comportamento è conservativo: lo script non rimuove automaticamente immagini, container, volumi o dati Docker. Se esiste il precedente `/etc/apt/sources.list.d/docker.list`, può sostituirlo con il nuovo `docker.sources` soltanto quando riconosce con certezza che contiene esclusivamente il repository ufficiale Docker. Se il contenuto è vuoto, misto, illeggibile o ambiguo, si interrompe senza modificarlo.
+
 ## Installazione principale
 
 ### `installa_unsloth_studio_cpu.sh`
 
-Serve a preparare l'installer usato dal Dockerfile e a costruire l'immagine principale. Eseguilo dopo le verifiche preliminari, oppure per ricostruire l'immagine.
+Serve a preparare l'installer usato dal Dockerfile e a costruire l'immagine principale. Non installa Docker: eseguilo dopo avere verificato che Docker sia disponibile, oppure per ricostruire l'immagine.
 
 ```bash
 ./installa_unsloth_studio_cpu.sh
